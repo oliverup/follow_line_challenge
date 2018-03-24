@@ -2,7 +2,10 @@
 
 import cv2
 import numpy as np
-
+import rospy
+from std_msgs.msg import String
+from geometry_msgs.msg import Polygon
+from geometry_msgs.msg import Point
 #cut out the right part of the image to work with ... as in cut the white part with the line out of the picture the bot takes
 
 
@@ -126,11 +129,87 @@ draw_img = glc.img.copy()
 #this part is to test and draws a thin red line in the black line. later the arm follows the coordinates of the line_pos_list
 line_pos_list = glc.search()
 
+def get_corner_coords(line_pos_list):
+    xp = False
+    xn = False
+    yp = False
+    yn = False
+    corner_coords = []
+
+    for a in range (len(line_pos_list)):
+        if a != (len(line_pos_list)-1): b = a+1
+
+        if line_pos_list[a][1] < line_pos_list[b][1]:
+            if not xp:
+                corner_coords.append(line_pos_list[a])
+                #print 'xp'
+            xp = True
+            xn = False
+            yp = False
+            yn = False
+        elif line_pos_list[a][1] > line_pos_list[b][1]:
+            if not xn:
+                corner_coords.append(line_pos_list[a])
+                #print 'xn'
+            xn = True
+            xp = False
+            yp = False
+            yn = False
+
+        if line_pos_list[a][0] < line_pos_list[b][0]:
+            if not yp:
+                corner_coords.append(line_pos_list[a])
+                #print 'yp'
+            yp = True
+            xp = False
+            xn = False
+            yn = False
+        elif line_pos_list[a][0] > line_pos_list[b][0]:
+            if not yn:
+                corner_coords.append(line_pos_list[a])
+                #print 'yn'
+            yn = True
+            xp = False
+            xn = False
+            yp = False
+    return corner_coords
+
+corner_coords = get_corner_coords(line_pos_list)
+print corner_coords
 for b in range(len(line_pos_list)-1):
     for c in range(10):
-        draw_img[(line_pos_list[b][0]+int(round(((line_pos_list[b+1][0]-line_pos_list[b][0])/10.0)*c))),(line_pos_list[b][1]+int(round(((line_pos_list[b+1][1]-line_pos_list[b][1])/10.0)*c)))] = [0,0,200] #draws lines between every two coordinates in the _line_pos_list
+        draw_img[(line_pos_list[b][0]+int(round(((line_pos_list[b+1][0]-line_pos_list[b][0])/10.0)*c))),(line_pos_list[b][1]+int(round(((line_pos_list[b+1][1]-line_pos_list[b][1])/10.0)*c)))] = [0,0,200] #draws lines between every two coordinates in the line_pos_list
 
 cv2.imwrite('line.png',draw_img)
 #print line_pos_list
 print 'Done'
 
+class ros_node:
+    def __init__(self):
+        self.pub = rospy.Publisher("line_following_coordinates", Polygon, queue_size = 10)
+#        self.sub = rospy.Subscriber("topic the camera publishes on?", picture message? , self.subcallback)
+        self.timer = rospy.Timer(rospy.Duration(10.0), self.timercallback)
+#    def subcallback(self, data):
+#        camera_img = 
+    def timercallback(self, data):
+        p = Point()
+        msg = Polygon()
+        for item in corner_coords:
+            p.x = item[0]
+            p.y = item[1]
+            msg.points.append(p)
+        self.pub.publish(msg)
+    def run(self,rate):
+        rate.sleep()
+
+def main():
+    rospy.init_node('line_following')
+
+    r = ros_node()
+    rate = rospy.Rate(1)
+    while not rospy.is_shutdown():
+        r.run(rate)
+
+
+if __name__=="__main__":
+    main()
