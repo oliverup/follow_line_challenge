@@ -7,7 +7,7 @@ namespace yapi = youbot_api;
 LineFollowingNode::LineFollowingNode(ros::NodeHandle &node_handle):
     node_(&node_handle)
 {
-    // === INIT YOUBOT ===
+    // Init youBot
     arm_.init(node_handle);
     base_.init(node_handle);
     gripper_.init(node_handle);
@@ -45,23 +45,23 @@ void LineFollowingNode::LineFollowingExcute(const geometry_msgs::PoseArray goal)
     cartesian_path.resize(goal.poses.size());
 
     for(int i = 0; i < goal.poses.size(); i++) {
-      pose_in.pose = goal.poses[i];
-      pose_in.header = goal.header;
+        pose_in.pose = goal.poses[i];
+        pose_in.header = goal.header;
 
-      try {
-          tf_listener_.transformPose("arm_link_0", pose_in, pose_out);
-      }
-      catch(tf::TransformException ex) {
-          ROS_ERROR("Transform error: %s at item: %d", ex.what(), i);
-          return;
-      }
+        try {
+            tf_listener_.transformPose("arm_link_0", pose_in, pose_out);
+        }
+        catch(tf::TransformException ex) {
+            ROS_ERROR("Transform error: %s at item: %d", ex.what(), i);
+            return;
+        }
 
-      cartesian_path[i].setX(pose_out.pose.position.x);
-      cartesian_path[i].setY(pose_out.pose.position.y);
-      cartesian_path[i].setZ(pose_out.pose.position.z);
-      // Theta = k1 * position.x + b1
-      cartesian_path[i].setTheta(-(5.0/3.0)*pose_in.pose.position.x*M_PI +11.0/6.0*M_PI);
-      cartesian_path[i].setQ5(0.0);
+    cartesian_path[i].setX(pose_out.pose.position.x);
+    cartesian_path[i].setY(pose_out.pose.position.y);
+    cartesian_path[i].setZ(pose_out.pose.position.z);
+    // Theta = k1 * position.x + b1
+    cartesian_path[i].setTheta(-(5.0/3.0)*pose_in.pose.position.x*M_PI +11.0/6.0*M_PI);
+    cartesian_path[i].setQ5(0.0);
     }
 
     // === DO ARM MOVEMENT ===

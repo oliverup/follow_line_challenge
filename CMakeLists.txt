@@ -205,12 +205,12 @@ include_directories(
 # catkin_add_nosetests(test)
 #catkin_install_python(PROGRAMS python_scripts/follow_line_node.py
 #                      DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
-add_executable(line_following_0
+add_executable(line_following
   src/line_following.cpp
   include/follow_line/line_following.h
 )
 
-target_link_libraries(line_following_0
+target_link_libraries(line_following
   ${catkin_LIBRARIES}
 )
 #add_executable(follow_line_node src/follow_line_node.py)
