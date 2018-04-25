@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<launch>
+	<!-- LAUNCH NODE -->
+        <node name="line_following" pkg="follow_line" type="line_following" output="screen" />
+</launch>
