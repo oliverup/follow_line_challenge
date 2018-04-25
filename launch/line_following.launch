@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<launch>
+	<!-- LOAD PARAMETERS -->
+	<rosparam file="$(find youbot_manipulation)/cfg/params.yaml" command="load" ns="youbot_manipulation" />	
+
+	<!-- LAUNCH NODE -->
+        <node name="line_following" pkg="youbot_manipulation" type="line_following" output="screen" />
+</launch>

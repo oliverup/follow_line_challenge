@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   geometry_msgs
   message_generation
+  luh_youbot_controller_api
 )
 
 ## System dependencies are found with CMake's conventions
@@ -204,7 +205,14 @@ include_directories(
 # catkin_add_nosetests(test)
 #catkin_install_python(PROGRAMS python_scripts/follow_line_node.py
 #                      DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
-                      
+add_executable(line_following_0
+  src/line_following.cpp
+  include/follow_line/line_following.h
+)
+
+target_link_libraries(line_following_0
+  ${catkin_LIBRARIES}
+)
 #add_executable(follow_line_node src/follow_line_node.py)
 ##target_link_libraries(follow_line_node ${catkin_LIBRARIES})
 ##add_dependencies(follow_line_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
