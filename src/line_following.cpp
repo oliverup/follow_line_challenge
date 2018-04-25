@@ -24,6 +24,14 @@ LineFollowingNode::~LineFollowingNode()
 //########## ACTION SERVER EXCUTE ######################################################################################
 void LineFollowingNode::LineFollowingExcute(const geometry_msgs::PoseArray goal)
 {
+    // Open the gripper
+    gripper_.open();
+    gripper_.waitForCurrentAction();
+
+    // Close the gripper
+    gripper_.setWidth(0);
+    gripper_.waitForCurrentAction();
+
     // Wait for transform
     bool transform_is_available = tf_listener_.waitForTransform("arm_link_0", goal.header.frame_id,
                                                                 goal.header.stamp, ros::Duration(2.0));
@@ -46,7 +54,8 @@ void LineFollowingNode::LineFollowingExcute(const geometry_msgs::PoseArray goal)
 
     for(int i = 0; i < goal.poses.size(); i++) {
         pose_in.pose = goal.poses[i];
-        pose_in.header = goal.header;
+        pose_in.header.frame_id = "camera_link";
+        pose_in.header.stamp = ros::Time::now();
 
         try {
             tf_listener_.transformPose("arm_link_0", pose_in, pose_out);
@@ -60,11 +69,10 @@ void LineFollowingNode::LineFollowingExcute(const geometry_msgs::PoseArray goal)
     cartesian_path[i].setY(pose_out.pose.position.y);
     cartesian_path[i].setZ(pose_out.pose.position.z);
     // Theta = k1 * position.x + b1
-    cartesian_path[i].setTheta(-(5.0/3.0)*pose_in.pose.position.x*M_PI +11.0/6.0*M_PI);
-    cartesian_path[i].setQ5(0.0);
+    cartesian_path[i].setTheta(-M_PI*pose_in.pose.position.x + 1.5*M_PI);
+    cartesian_path[i].setQ5(M_PI*pose_in.pose.position.y);
     }
 
-    // === DO ARM MOVEMENT ===
     // Move the arm alone a path
     arm_.moveAlongPath(cartesian_path);
     arm_.waitForCurrentAction();
