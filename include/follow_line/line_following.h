@@ -5,6 +5,7 @@
 #include <luh_youbot_controller_api/controller_api.h>
 #include <geometry_msgs/PoseArray.h>
 #include <tf/transform_listener.h>
+#include <signal.h>
 #include <sstream>
 #include <vector>
 
@@ -30,6 +31,9 @@ private:
     youbot_api::YoubotGripper gripper_;
 
     // transform listener
-    tf::TransformListener tf_listener_;    
+    tf::TransformListener tf_listener_;
+
+    void stopAction();
 };
 #endif // FOLLOW_LINE_LINE_FOLLOWING_H
+
