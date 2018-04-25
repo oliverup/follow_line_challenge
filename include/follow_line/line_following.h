@@ -5,7 +5,6 @@
 #include <luh_youbot_controller_api/controller_api.h>
 #include <geometry_msgs/PoseArray.h>
 #include <tf/transform_listener.h>
-#include <signal.h>
 #include <sstream>
 #include <vector>
 

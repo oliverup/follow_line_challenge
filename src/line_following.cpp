@@ -24,8 +24,8 @@ LineFollowingNode::~LineFollowingNode()
 //########## STOP POSE SUBSCRIBER ######################################################################################
 void LineFollowingNode::stopAction()
 {
-    // Shutdown subscriber
-    line_pose_sub_.shutdown();
+    // Shutdown ros
+    ros::shutdown();
 }
 
 //########## ACTION EXCUTE #############################################################################################
