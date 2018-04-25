@@ -1,0 +1,5 @@
+<?xml version="1.0" ?>
+<launch>
+    <node pkg="tf" type="static_transform_publisher" name="camera_link_broadcaster" args="-0.02 0 -0.04 0 -1.60 0 /arm_link_5 /camera_link 50"/>
+    <node name="follow_line_node" pkg="follow_line" type="follow_line_node.py" output="screen" />
+</launch>
