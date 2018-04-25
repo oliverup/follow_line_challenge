@@ -23,6 +23,7 @@ private:
 
     // ros subscriber
     ros::Subscriber line_pose_sub_;
+
     // youbot
     youbot_api::YoubotArm arm_;
     youbot_api::YoubotBase base_;
