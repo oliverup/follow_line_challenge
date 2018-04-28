@@ -9,6 +9,7 @@ from cv_bridge import CvBridge, CvBridgeError
 from std_msgs.msg import String
 from geometry_msgs.msg import PoseArray, Pose
 from sensor_msgs.msg import Image, CameraInfo
+from std_srvs.srv import Empty as Empty
 
 
 class get_line_coordinates:
@@ -19,15 +20,26 @@ class get_line_coordinates:
         self.HEIGHT = (self.img.shape[0])
         self.current_len = 0
         self.temp_co_coo = []
+
+    def setup(self,obj):
+        self.rn = obj
+        print "got a new img"
+        self.img = self.rn.camera_img
+        self.WIDTH = (self.img.shape[1])
+        self.HEIGHT = (self.img.shape[0])
+        self.current_len = 0
+        self.temp_co_coo = []
         
-    def setup(self):
+        white = cv2.imread('white.png')
+        white_resized = cv2.resize(white,(self.WIDTH, self.HEIGHT), interpolation = cv2.INTER_CUBIC)
         ############# create bin image without grid #################
+        self.img[(self.HEIGHT-50):self.HEIGHT, :] = white_resized[(self.HEIGHT-50):self.HEIGHT, :]
         self.img = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
-        kernel = np.ones((4,4),np.uint8)
+        kernel = np.ones((5,5),np.uint8)
         ret,thresh = cv2.threshold(self.img,80,255,cv2.THRESH_BINARY_INV)#        <-------------THRESHHOLD
         self.img = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
         #cv2.imshow('binary', self.img)
-        #cv2.waitKey(1000)
+        #cv2.waitKey(5000)
         #cv2.destroyAllWindows()
 
     def search(self):
@@ -45,7 +57,9 @@ class get_line_coordinates:
                 else: 
                     darkness_len = self.current_len
                     self.current_len = 0
-                if darkness_len > 15: #                                            <------------MIN LINE WIDTH 
+                if darkness_len > 50:
+                    pass
+                elif darkness_len > 15: #                                            <------------MIN LINE WIDTH 
                     line_middle = (a-darkness_len/2, b)
                     print "starting point found!"
                     return (self.follow(line_middle,(darkness_len/2)), (darkness_len/2))
@@ -253,12 +267,33 @@ class ros_node:
         self.K = 0
         self.Z = 0
         self.pose_msg = PoseArray()
+        self.service = rospy.Service('/reset_line_vision', Empty, self.service_cb)
+        self.service2 = rospy.Service('/datas_recieved', Empty, self.service_cb2)
+        self.data_recieved = False
         
     def info_subcallback(self, data):
         if not self.cam_info:
             self.cam_info = True
             print 'cam_info taken: %s' %str(data.K)
             self.K = data.K
+    
+    def service_cb(self, data):
+        #reset
+        self.cam_info = False
+        self.pic_taken = False
+        self.depth_pic_taken = False
+        self.gathered_all_data = False
+        self.temp = False
+        self.camera_img = []
+        self.K = 0
+        self.Z = 0
+        self.pose_msg = PoseArray()
+        self.data_recieved = False
+        return []
+        
+    def service_cb2(self, data):
+        self.data_recieved = True
+        return []
     
     def depth_image_subcallback(self, data):
         if not self.depth_pic_taken:
@@ -278,7 +313,8 @@ class ros_node:
             #self.gathered_all_data = True
             if not self.temp: 
                 self.main()
-            self.pub.publish(self.pose_msg)
+            if not self.data_recieved:
+                self.pub.publish(self.pose_msg)
     '''
             else:
                 #print self.pose_msg
@@ -296,7 +332,7 @@ class ros_node:
         print "Start"
         glc = get_line_coordinates(self)
         draw_img = glc.img.copy()
-        glc.setup()
+        glc.setup(self)
         ab = glc.search()
         line_pos_list, wall_dist = ab[0],ab[1]
         corner_coords = glc.get_corner_coords(line_pos_list, wall_dist)

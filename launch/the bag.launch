@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<launch>
+  <node>
+  <node name="rosbag" type="play" args="--clock -l" pkg="testing">
+    <>
+  </node>
+</launch>

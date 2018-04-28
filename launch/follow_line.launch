@@ -1,6 +1,7 @@
 <?xml version="1.0" ?>
 <launch>
     <node pkg="tf" type="static_transform_publisher" name="camera_link_broadcaster" args="-0.02 0 -0.04 0 -1.60 0 /arm_link_5 /camera_link 50"/>
+    <node pkg="tf" type="static_transform_publisher" name="pen_link_broadcaster" args="0.0 0 0.198 0.0 -1.57 0.0 /arm_link_5 /pen_pose 50"/>
     <node name="follow_line_node" pkg="follow_line" type="follow_line_node.py" output="screen" />
     <node name="line_following" pkg="follow_line" type="line_following" output="screen" />
 </launch>
