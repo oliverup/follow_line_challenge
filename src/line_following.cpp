@@ -10,19 +10,21 @@ LineFollowingNode::LineFollowingNode(ros::NodeHandle &node_handle):
     gripper_.init(node_handle);
 
     // Init parameters
-    node_->param("youbot_manipulation/camera_link_offset_z", camera_link_offset_z_, 0.004);
-    node_->param("youbot_manipulation/angle_theta", angle_theta_, M_PI);
-    node_->param("youbot_manipulation/angle_q5", angle_q5_, 0.0);
-    node_->param("youbot_manipulation/base_offset", base_offset_, -0.05);
+    node_->param("follow_line/camera_link_offset_z", camera_link_offset_z_, 0.004);
+    node_->param("fllow_line/angle_theta", angle_theta_, M_PI);
+    node_->param("follow_line/angle_q5", angle_q5_, 0.0);
+    node_->param("follow_line/base_offset", base_offset_, -0.05);
 
     // Close the gripper
+    ROS_INFO("The gripper closing...");
     gripper_.setWidth(0);
 
     // Move arm to search pose
+    ROS_INFO("Move to search center...");
     arm_.moveToPose("SEARCH_CENTER");
     arm_.waitForCurrentAction();
 
-    line_pose_sub_ = node_->subscribe("/line_pose", 1000, &LineFollowingNode::LineFollowingExcute, this);
+    line_pose_sub_ = node_->subscribe("/line_following_coordinates", 1, &LineFollowingNode::LineFollowingExcute, this);
     receive_client_ = node_->serviceClient<std_srvs::Empty>("/datas_received");
     reset_client_ = node_->serviceClient<std_srvs::Empty>("/reset_line_vision");
 }
@@ -38,6 +40,7 @@ void LineFollowingNode::LineFollowingExcute(const geometry_msgs::PoseArray goal)
 {
     // Call a service to stop sending the messeges
     receive_client_.call(stop_send_);
+    ROS_INFO("Stopping send line pose messeges...");
 
     // Wait for transform
     bool transform_is_available = tf_listener_.waitForTransform("arm_link_0", goal.header.frame_id,
@@ -78,13 +81,16 @@ void LineFollowingNode::LineFollowingExcute(const geometry_msgs::PoseArray goal)
             //cartesian_path_[i].setQ5(-M_PI*pose_in.pose.position.y);
             cartesian_path_[i].setTheta(angle_theta_);
             cartesian_path_[i].setQ5(angle_q5_);
+	    ROS_INFO("pose: %d: %f, %f, %f, %f, %f", i, cartesian_path_[i][0], cartesian_path_[i][1], cartesian_path_[i][2], cartesian_path_[i][3], cartesian_path_[i][4]); 
         }
     }
 
+    ROS_INFO("Move along path");
     // Move the arm alone a path
     arm_.moveAlongPath(cartesian_path_);
     arm_.waitForCurrentAction();
 
+    ROS_INFO("Done");
     // Move base a little right
     base_.move(0.0, base_offset_, 0.0);
 

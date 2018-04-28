@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import time
 import cv2
 import numpy as np
 import rospy
@@ -11,7 +12,7 @@ from geometry_msgs.msg import PoseArray, Pose
 from sensor_msgs.msg import Image, CameraInfo
 from std_srvs.srv import Empty as Empty
 
-
+time.sleep(15)
 class get_line_coordinates:
     def __init__(self,obj):
         self.rn = obj
@@ -30,17 +31,17 @@ class get_line_coordinates:
         self.current_len = 0
         self.temp_co_coo = []
         
-        white = cv2.imread('white.png')
-        white_resized = cv2.resize(white,(self.WIDTH, self.HEIGHT), interpolation = cv2.INTER_CUBIC)
+        #white = cv2.imread('white.png')
+        #white_resized = cv2.resize(white,(self.WIDTH, self.HEIGHT), interpolation = cv2.INTER_CUBIC)
         ############# create bin image without grid #################
-        self.img[(self.HEIGHT-50):self.HEIGHT, :] = white_resized[(self.HEIGHT-50):self.HEIGHT, :]
+        #self.img[(self.HEIGHT-50):self.HEIGHT, :] = white_resized[(self.HEIGHT-50):self.HEIGHT, :]
         self.img = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
         kernel = np.ones((5,5),np.uint8)
-        ret,thresh = cv2.threshold(self.img,80,255,cv2.THRESH_BINARY_INV)#        <-------------THRESHHOLD
+        ret,thresh = cv2.threshold(self.img,95	,255,cv2.THRESH_BINARY_INV)#        <-------------THRESHHOLD
         self.img = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
-        #cv2.imshow('binary', self.img)
-        #cv2.waitKey(5000)
-        #cv2.destroyAllWindows()
+        cv2.imshow('binary', self.img)
+        cv2.waitKey(5000)
+        cv2.destroyAllWindows()
 
     def search(self):
         for b in range (0 ,self.WIDTH, 3):
@@ -239,14 +240,14 @@ def red_line(line_pos_list,draw_img):
     for b in range(len(line_pos_list)-1):
         for c in range(1):
             draw_img[(line_pos_list[b][0]+int(round(((line_pos_list[b+1][0]-line_pos_list[b][0])/1.0)*c))),(line_pos_list[b][1]+int(round(((line_pos_list[b+1][1]-line_pos_list[b][1])/1.0)*c)))] = [0,0,200]
-
+    
     cv2.imwrite('line_1.png',draw_img)
 
 def green_line(corner_coords,draw_img):
     for b in range(len(corner_coords)-1):
         for c in range(300):
             draw_img[(corner_coords[b][0]+int(round(((corner_coords[b+1][0]-corner_coords[b][0])/300.0)*c))),(corner_coords[b][1]+int(round(((corner_coords[b+1][1]-corner_coords[b][1])/300.0)*c)))] = [0,200,0]
-            
+    
     cv2.imwrite('line_1.png',draw_img)
 
 
@@ -313,8 +314,8 @@ class ros_node:
             #self.gathered_all_data = True
             if not self.temp: 
                 self.main()
-            if not self.data_recieved:
-                self.pub.publish(self.pose_msg)
+            	if not self.data_recieved:
+                	self.pub.publish(self.pose_msg)
     '''
             else:
                 #print self.pose_msg
@@ -338,9 +339,9 @@ class ros_node:
         corner_coords = glc.get_corner_coords(line_pos_list, wall_dist)
         red_line(line_pos_list,draw_img)
         green_line(corner_coords,draw_img)
-        #cv2.imshow("img", draw_img)
-        #cv2.waitKey(1000)
-        #cv2.destroyAllWindows()
+        cv2.imshow("img", draw_img)
+        cv2.waitKey(5000)
+        cv2.destroyAllWindows()
         print '2d work done.'
 
         p = Pose()
@@ -353,9 +354,17 @@ class ros_node:
                 break
             p = Pose()
             p.position.z = self.Z
-            p.position.y = (corner_coords[i][0] - self.K[4] * p.position.z)/self.K[5]
-            p.position.x = (corner_coords[i][1] - self.K[0] * p.position.z)/self.K[2]
+            #p.position.y = (corner_coords[i][0] - self.K[4] * p.position.z)/self.K[5]
+            #p.position.x = (corner_coords[i][1] - self.K[0] * p.position.z)/self.K[2]
+            #print ("(corner_coords[i][0] - (glc.HEIGHT/2))     :     " + str(corner_coords[i][0] - (glc.HEIGHT/2)))
+            #print (((np.tan(np.arccos(self.K[4]/(np.sqrt((self.K[4])**2+(corner_coords[i][0] - (glc.HEIGHT/2))**2))))))*p.position.z)
+
+            #p.position.y = np.tan((np.arccos((corner_coords[i][0] - (glc.HEIGHT/2)) / self.K[4]))) * p.position.z
+            #p.position.x = np.tan((np.arccos((corner_coords[i][1] - (glc.WIDTH/2)) / self.K[0]))) * p.position.z
+            p.position.y = (((np.tan(np.arccos(self.K[4]/(np.sqrt((self.K[4])**2+(corner_coords[i][0] - (glc.HEIGHT/2))**2))))))*p.position.z)
+            p.position.x = (((np.tan(np.arccos(self.K[0]/(np.sqrt((self.K[0])**2+(corner_coords[i][1] - (glc.WIDTH/2))**2))))))*p.position.z)
             p.orientation.w = 1
+            p.position.z = -self.Z
             pose_msg.poses.append(p)
 
             i += 1
