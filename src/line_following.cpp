@@ -1,8 +1,5 @@
 #include "follow_line/line_following.h"
 
-namespace ykin = luh_youbot_kinematics;
-namespace yapi = youbot_api;
-
 //########## CONSTRUCTOR ###############################################################################################
 LineFollowingNode::LineFollowingNode(ros::NodeHandle &node_handle):
     node_(&node_handle)
@@ -12,7 +9,22 @@ LineFollowingNode::LineFollowingNode(ros::NodeHandle &node_handle):
     base_.init(node_handle);
     gripper_.init(node_handle);
 
+    // Init parameters
+    node_->param("youbot_manipulation/camera_link_offset_z", camera_link_offset_z_, 0.004);
+    node_->param("youbot_manipulation/angle_theta", angle_theta_, M_PI);
+    node_->param("youbot_manipulation/angle_q5", angle_q5_, 0.0);
+    node_->param("youbot_manipulation/base_offset", base_offset_, -0.05);
+
+    // Close the gripper
+    gripper_.setWidth(0);
+
+    // Move arm to search pose
+    arm_.moveToPose("SEARCH_CENTER");
+    arm_.waitForCurrentAction();
+
     line_pose_sub_ = node_->subscribe("/line_pose", 1000, &LineFollowingNode::LineFollowingExcute, this);
+    receive_client_ = node_->serviceClient<std_srvs::Empty>("/datas_received");
+    reset_client_ = node_->serviceClient<std_srvs::Empty>("/reset_line_vision");
 }
 
 //########## DESTRUCTOR ################################################################################################
@@ -21,23 +33,11 @@ LineFollowingNode::~LineFollowingNode()
 
 }
 
-//########## STOP POSE SUBSCRIBER ######################################################################################
-void LineFollowingNode::stopAction()
-{
-    // Shutdown ros
-    ros::shutdown();
-}
-
 //########## ACTION EXCUTE #############################################################################################
 void LineFollowingNode::LineFollowingExcute(const geometry_msgs::PoseArray goal)
 {
-    // Open the gripper
-    gripper_.open();
-    gripper_.waitForCurrentAction();
-
-    // Close the gripper
-    gripper_.setWidth(0);
-    gripper_.waitForCurrentAction();
+    // Call a service to stop sending the messeges
+    receive_client_.call(stop_send_);
 
     // Wait for transform
     bool transform_is_available = tf_listener_.waitForTransform("arm_link_0", goal.header.frame_id,
@@ -50,40 +50,50 @@ void LineFollowingNode::LineFollowingExcute(const geometry_msgs::PoseArray goal)
     }
     else {
         ROS_INFO("Transform from %s to arm_link_0.", goal.header.frame_id.c_str());
-    }
 
-    // Transform the poses to arm_link_0
-    geometry_msgs::PoseStamped pose_in;
-    geometry_msgs::PoseStamped pose_out;
-    std::vector<ykin::CartesianPosition> cartesian_path;
-    cartesian_path.resize(goal.poses.size());
+        // Transform the poses to arm_link_0
+        geometry_msgs::PoseStamped pose_in, pose_out;
+        cartesian_path_.resize(goal.poses.size());
 
-    for(int i = 0; i < goal.poses.size(); i++) {
-        pose_in.pose = goal.poses[i];
-        pose_in.header = goal.header;
+        for(int i = 0; i < goal.poses.size(); i++) {
+            pose_in.pose.position.x = goal.poses[i].position.x;
+            pose_in.pose.position.y = goal.poses[i].position.y;
+            pose_in.pose.position.z = goal.poses[i].position.z - camera_link_offset_z_;
+            pose_in.pose.orientation = goal.poses[i].orientation;
+            pose_in.header = goal.header;
 
-        try {
-            tf_listener_.transformPose("arm_link_0", pose_in, pose_out);
+            try {
+                tf_listener_.transformPose("arm_link_0", pose_in, pose_out);
+            }
+            catch(tf::TransformException ex) {
+                ROS_ERROR("Transform error: %s at item: %d", ex.what(), i);
+                return;
+            }
+
+            cartesian_path_[i].setX(pose_out.pose.position.x);
+            cartesian_path_[i].setY(pose_out.pose.position.y);
+            cartesian_path_[i].setZ(pose_out.pose.position.z);
+            // Theta = k1 * position.x + b1
+            //cartesian_path_[i].setTheta(-M_PI*pose_in.pose.position.x + 1.5*M_PI);
+            //cartesian_path_[i].setQ5(-M_PI*pose_in.pose.position.y);
+            cartesian_path_[i].setTheta(angle_theta_);
+            cartesian_path_[i].setQ5(angle_q5_);
         }
-        catch(tf::TransformException ex) {
-            ROS_ERROR("Transform error: %s at item: %d", ex.what(), i);
-            return;
-        }
-
-    cartesian_path[i].setX(pose_out.pose.position.x);
-    cartesian_path[i].setY(pose_out.pose.position.y);
-    cartesian_path[i].setZ(pose_out.pose.position.z);
-    // Theta = k1 * position.x + b1
-    cartesian_path[i].setTheta(-M_PI*pose_in.pose.position.x + 1.5*M_PI);
-    cartesian_path[i].setQ5(-M_PI*pose_in.pose.position.y);
     }
 
     // Move the arm alone a path
-    arm_.moveAlongPath(cartesian_path);
+    arm_.moveAlongPath(cartesian_path_);
     arm_.waitForCurrentAction();
 
-    // Stop line following action
-    stopAction();
+    // Move base a little right
+    base_.move(0.0, base_offset_, 0.0);
+
+    // Move arm to search pose
+    arm_.moveToPose("SEARCH_CENTER");
+    arm_.waitForCurrentAction();
+
+    // Do reset
+    reset_client_.call(do_reset_);
 }
 
 
@@ -100,3 +110,4 @@ int main(int argc, char** argv)
 
     return 0;
 }
+

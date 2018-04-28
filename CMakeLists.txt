@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   roslib
   rospy
   std_msgs
+  std_srvs
   geometry_msgs
   message_generation
   luh_youbot_controller_api

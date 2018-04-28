@@ -1,0 +1,4 @@
+camera_link_offset_z: 0.004
+angle_theta: M_PI
+angle_q5: 0.0
+base_offset: -0.05
