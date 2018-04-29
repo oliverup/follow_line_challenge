@@ -361,7 +361,7 @@ class ros_node:
 
             #p.position.y = np.tan((np.arccos((corner_coords[i][0] - (glc.HEIGHT/2)) / self.K[4]))) * p.position.z
             #p.position.x = np.tan((np.arccos((corner_coords[i][1] - (glc.WIDTH/2)) / self.K[0]))) * p.position.z
-            p.position.y = (((np.tan(np.arccos(self.K[4]/(np.sqrt((self.K[4])**2+(corner_coords[i][0] - (glc.HEIGHT/2))**2))))))*p.position.z)
+            p.position.y = (((np.tan(np.arccos(self.K[4]/(np.sqrt((self.K[4])**2-(corner_coords[i][0] - (glc.HEIGHT/2))**2))))))*p.position.z)
             p.position.x = (((np.tan(np.arccos(self.K[0]/(np.sqrt((self.K[0])**2+(corner_coords[i][1] - (glc.WIDTH/2))**2))))))*p.position.z)
             p.orientation.w = 1
             p.position.z = -self.Z
